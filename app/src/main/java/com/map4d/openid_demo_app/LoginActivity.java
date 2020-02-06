@@ -1,5 +1,6 @@
 package com.map4d.openid_demo_app;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.ProgressDialog;
@@ -14,6 +15,14 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.SignInButton;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.map4d.openid_demo_app.API.APIClient;
 import com.map4d.openid_demo_app.API_Interface.Login_interface;
 import com.map4d.openid_demo_app.Model.Model_loginApi;
@@ -25,15 +34,19 @@ import retrofit2.Response;
 public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
     private static final int REQUEST_SIGNUP = 0;
+    private static final int RC_SIGN_IN = 101;
     EditText _userText;
     EditText _passwordText;
     Button _loginButton;
+    SignInButton signInButton;
     TextView _signupLink;
     String Grant_type = "password", Cliect_id = "smartcodes-web", Client_secret = "66dce544-1619-4fe5-bf59-27a57c399880";
     private String Username, Password;
     Model_loginApi model_loginApi;
     SharedPreferences sharedpreferences;
     boolean check = false;
+
+    GoogleSignInClient googleSignInClient;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -51,12 +64,7 @@ public class LoginActivity extends AppCompatActivity {
 
             @Override
             public void onClick(View v) {
-//                Username = _emailText.getText().toString();
-//                Password = _passwordText.getText().toString();
-//                Log.d("text",Username+", "+Password+", "+Grant_type+", "+Cliect_id+", "+Client_secret);
-//                Check_login(Username, Password, Grant_type, Cliect_id, Client_secret);
                 login();
-
             }
         });
 
@@ -71,8 +79,41 @@ public class LoginActivity extends AppCompatActivity {
                 overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
             }
         });
-    }
+        //login with google
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .build();
+        googleSignInClient = GoogleSignIn.getClient(this, gso);
+        signInButton = findViewById(R.id.btnGoogle);
+        signInButton.setSize(SignInButton.SIZE_STANDARD);
+        signInButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                signIn();
+            }
+        });
 
+    }
+    private void signIn(){
+        GoogleSignInAccount acct = GoogleSignIn.getLastSignedInAccount(this);
+        if (acct!=null){
+            signOut();
+        }
+        Intent signInIntent = googleSignInClient.getSignInIntent();
+        startActivityForResult(signInIntent, RC_SIGN_IN);
+    }
+    private void signOut() {
+        googleSignInClient.signOut()
+                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
+                        startActivity(intent);
+                        finish();
+                        //overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
+                    }
+                });
+    }
     public void login() {
         Log.d(TAG, "Login");
         if (!validate()) {
@@ -109,6 +150,7 @@ public class LoginActivity extends AppCompatActivity {
         }
 
     }
+
     private Boolean Check_login(String username, String password, String grant_type, String client_id, String client_secret){
         check = false;
         Login_interface service = APIClient.getClient().create(Login_interface.class);
@@ -148,6 +190,25 @@ public class LoginActivity extends AppCompatActivity {
                 // By default we just finish the Activity and log them in automatically
                 this.finish();
             }
+            if (resultCode == RC_SIGN_IN){
+                Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+                handleSignInResult(task);
+            }
+        }
+    }
+
+    private void handleSignInResult(Task<GoogleSignInAccount> completedTask) {
+        try {
+            GoogleSignInAccount account = completedTask.getResult(ApiException.class);
+
+            // Signed in successfully, show authenticated UI.
+            Intent intent = new Intent(getApplicationContext(), InfoActivity.class);
+            startActivity(intent);
+            finish();
+        } catch (ApiException e) {
+            // The ApiException status code indicates the detailed failure reason.
+            // Please refer to the GoogleSignInStatusCodes class reference for more information.
+            Log.w("Error", "signInResult:failed code=" + e.getStatusCode());
         }
     }
 
@@ -160,7 +221,7 @@ public class LoginActivity extends AppCompatActivity {
     public void onLoginSuccess() {
         _loginButton.setEnabled(true);
         Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-        startActivityForResult(intent, REQUEST_SIGNUP);
+        startActivityForResult(intent, RC_SIGN_IN);
         finish();
         overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
     }

@@ -12,11 +12,12 @@
         android:paddingLeft="24dp"
         android:paddingRight="24dp">
 
-        <ImageView android:src="@drawable/logo"
-            android:layout_width="wrap_content"
-            android:layout_height="72dp"
+        <ImageView
+            android:layout_width="210dp"
+            android:layout_height="150dp"
+            android:layout_gravity="center_horizontal"
             android:layout_marginBottom="24dp"
-            android:layout_gravity="center_horizontal" />
+            android:src="@drawable/logo" />
 
         <EditText android:id="@+id/input_username"
             android:layout_width="match_parent"
@@ -42,16 +43,27 @@
             android:layout_height="match_parent">
 
             <ImageView
-                android:id="@+id/btngoogle"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
+                android:id="@+id/btnvnpost"
+                android:layout_width="66dp"
+                android:layout_height="40dp"
                 android:layout_weight="1"
-                android:src="@drawable/search" />
+                android:src="@drawable/vnpost" />
+
+<!--            <ImageView-->
+<!--                android:id="@+id/btngoogle"-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="40dp"-->
+<!--                android:layout_weight="1"-->
+<!--                android:src="@drawable/search" />-->
+            <com.google.android.gms.common.SignInButton
+                android:id="@+id/btnGoogle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
 
             <ImageView
-                android:id="@+id/btnfacebook"
+                android:id="@+id/btnFacebook"
                 android:layout_width="wrap_content"
-                android:layout_height="w"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:src="@drawable/facebook" />
 
