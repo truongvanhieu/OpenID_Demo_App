@@ -6,4 +6,12 @@
     android:layout_height="match_parent"
     tools:context=".InfoActivity">
 
+    <com.google.android.gms.common.SignInButton
+        android:id="@+id/sign_in_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:ignore="MissingConstraints"
+        tools:layout_editor_absoluteX="130dp"
+        tools:layout_editor_absoluteY="319dp" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -11,14 +11,19 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
@@ -30,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
     ImageView imgAvatar;
     private static final int REQUEST_LAYOUT = 101;
     GoogleSignInClient googleSignInClient;
+    private GoogleApiClient mGoogleApiClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,9 +50,9 @@ public class MainActivity extends AppCompatActivity {
         GoogleSignInAccount gg = GoogleSignIn.getLastSignedInAccount(this);
         if (sharedpreferences.contains(AccessToken_Key)) {
             tvAccessToken.setText(sharedpreferences.getString(AccessToken_Key, ""));
-        }else if (gg!=null){
-            tvEmail.setText(gg.getEmail());
-            tvName.setText(gg.getDisplayName());
+//            if (gg!=null){
+//                signOut();
+//            }
         }else {
             Intent intent = new Intent(this, LoginActivity.class);
             startActivity(intent);
@@ -98,10 +104,12 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
                 startActivityForResult(intent, REQUEST_LAYOUT);
                 finish();
-                overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
+                overridePendingTransition(R.anim.push_left_out, R.anim.push_left_in);
                 tvAccessToken.setText("");
             }else if (acct!=null){
                 signOut();
+                tvName.setText("");
+                tvEmail.setText("");
 
             }
 
@@ -111,16 +119,30 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void signOut() {
-        googleSignInClient.signOut()
-                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
+//        googleSignInClient.signOut()
+//                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
+//                    @Override
+//                    public void onComplete(@NonNull Task<Void> task) {
+//                        Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
+//                        startActivityForResult(intent, REQUEST_LAYOUT);
+//                        finish();
+//                        overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
+//
+//                        //overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
+//                    }
+//                });
+        Auth.GoogleSignInApi.signOut(mGoogleApiClient).setResultCallback(
+                new ResultCallback<Status>() {
                     @Override
-                    public void onComplete(@NonNull Task<Void> task) {
+                    public void onResult(@NonNull Status status) {
+                        // Hide the sign out buttons, show the sign in button.
                         Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
-                        startActivity(intent);
-
-                        //overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
+                        startActivityForResult(intent, REQUEST_LAYOUT);
+                        finish();
+                        overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
                     }
                 });
+
     }
 
     private void DeleteAccessToken(String accessToken){
