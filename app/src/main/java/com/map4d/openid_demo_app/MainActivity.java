@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -18,6 +19,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
+import com.facebook.login.Login;
 import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
@@ -35,8 +38,9 @@ public class MainActivity extends AppCompatActivity {
     TextView tvAccessToken, tvName, tvEmail;
     ImageView imgAvatar;
     private static final int REQUEST_LAYOUT = 101;
+    private GoogleApiClient oogleApiClient;
+
     GoogleSignInClient googleSignInClient;
-    private GoogleApiClient mGoogleApiClient;
     private static final int RC_MAIN = 1;
 
     @Override
@@ -52,16 +56,35 @@ public class MainActivity extends AppCompatActivity {
         GoogleSignInAccount gg = GoogleSignIn.getLastSignedInAccount(this);
         if (sharedpreferences.contains(AccessToken_Key)) {
             tvAccessToken.setText(sharedpreferences.getString(AccessToken_Key, ""));
-//            if (gg!=null){
-//                signOut();
-//            }
+        }else if (gg!=null){
+            //signOutAccountGoogle(gg);
+            getProfileGGAccount();
         }else {
             Intent intent = new Intent(this, LoginActivity.class);
             startActivity(intent);
             finish();
         }
-        getProfileGGAccount();
 
+        getdata();
+
+    }
+    private void getdata(){
+        Bundle bundle = getIntent().getExtras();
+        if (bundle!=null) {
+            String first_name = bundle.getString("first_name");
+            String last_name = bundle.getString("last_name");
+            String email = bundle.getString("email");
+            String id = bundle.getString("id");
+            String image_url = bundle.getString("image_url");
+
+            tvName.setText(first_name+" "+last_name);
+            tvEmail.setText(email);
+
+            RequestOptions requestOptions = new RequestOptions();
+            requestOptions.dontAnimate();
+            Glide.with(MainActivity.this).load(image_url).into(imgAvatar);
+
+        }
     }
 
     @Override
@@ -73,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-                if (requestCode == RC_MAIN) {
+        if (requestCode == RC_MAIN) {
             if (resultCode == RESULT_OK) {
 
                 // TODO: Implement successful signup logic here
@@ -120,12 +143,14 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
                 startActivityForResult(intent, REQUEST_LAYOUT);
                 finish();
-                overridePendingTransition(R.anim.push_left_out, R.anim.push_left_in);
+                overridePendingTransition(R.anim.push_bottom_in, R.anim.push_top_out);
                 tvAccessToken.setText("");
-            }else if (acct!=null){
-                signOut();
+            }else {
+                signOutAccountGoogle(acct);
                 tvName.setText("");
                 tvEmail.setText("");
+                imgAvatar.setImageBitmap(null);
+
 
             }
 
@@ -134,30 +159,37 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void signOut() {
-//        googleSignInClient.signOut()
-//                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
+    private void signOutAccountGoogle(GoogleSignInAccount account) {
+        if (account!=null) {
+            if (googleSignInClient!=null) {
+                googleSignInClient.signOut()
+                        .addOnCompleteListener(this, new OnCompleteListener<Void>() {
+                            @Override
+                            public void onComplete(@NonNull Task<Void> task) {
+                                Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
+                                startActivityForResult(intent, RC_MAIN);
+                                finish();
+                                overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
+
+                                //overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
+                            }
+                        });
+            }else {
+                Log.e("googleSignInClient","Null");
+            }
+        }else{
+            Log.e("Account","Null");
+        }
+//        Auth.GoogleSignInApi.signOut(mGoogleApiClient).setResultCallback(
+//                new ResultCallback<Status>() {
 //                    @Override
-//                    public void onComplete(@NonNull Task<Void> task) {
+//                    public void onResult(@NonNull Status status) {
+//                        // Hide the sign out buttons, show the sign in button.
 //                        Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
-//                        startActivityForResult(intent, REQUEST_LAYOUT);
-//                        finish();
+//                        startActivityForResult(intent, RC_MAIN);
 //                        overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
-//
-//                        //overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
 //                    }
 //                });
-        Auth.GoogleSignInApi.signOut(mGoogleApiClient).setResultCallback(
-                new ResultCallback<Status>() {
-                    @Override
-                    public void onResult(@NonNull Status status) {
-                        // Hide the sign out buttons, show the sign in button.
-                        Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
-                        startActivityForResult(intent, REQUEST_LAYOUT);
-                        finish();
-                        overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
-                    }
-                });
 
     }
 

@@ -16,6 +16,16 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.facebook.AccessToken;
+import com.facebook.AccessTokenManager;
+import com.facebook.AccessTokenTracker;
+import com.facebook.CallbackManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
+import com.facebook.GraphRequest;
+import com.facebook.GraphResponse;
+import com.facebook.login.LoginResult;
+import com.facebook.login.widget.LoginButton;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -27,6 +37,12 @@ import com.google.android.gms.tasks.Task;
 import com.map4d.openid_demo_app.API.APIClient;
 import com.map4d.openid_demo_app.API_Interface.Login_interface;
 import com.map4d.openid_demo_app.Model.Model_loginApi;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.util.Arrays;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -40,7 +56,8 @@ public class LoginActivity extends AppCompatActivity {
     EditText _userText;
     EditText _passwordText;
     Button _loginButton;
-    SignInButton signInButton;
+    SignInButton signInGGButton;
+    LoginButton signInFBButton;
     TextView _signupLink;
     String Grant_type = "password", Cliect_id = "smartcodes-web", Client_secret = "66dce544-1619-4fe5-bf59-27a57c399880";
     private String Username, Password;
@@ -49,6 +66,7 @@ public class LoginActivity extends AppCompatActivity {
     boolean check = false;
 
     GoogleSignInClient googleSignInClient;
+    CallbackManager callbackManager;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -57,12 +75,8 @@ public class LoginActivity extends AppCompatActivity {
 
         sharedpreferences = getSharedPreferences("AccessToken",
                 Context.MODE_PRIVATE);
-        _userText = (EditText) findViewById(R.id.input_username);
-        _passwordText = (EditText) findViewById(R.id.input_password);
-        _loginButton = (Button) findViewById(R.id.btn_login);
-        _signupLink = (TextView) findViewById(R.id.link_signup);
-
-
+        initLayout();
+        //login with SmartCodes using API
         _loginButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -89,17 +103,46 @@ public class LoginActivity extends AppCompatActivity {
                 .requestEmail()
                 .build();
         googleSignInClient = GoogleSignIn.getClient(this, gso);
-        signInButton = findViewById(R.id.btnGoogle);
-        signInButton.setSize(SignInButton.SIZE_STANDARD);
-        signInButton.setOnClickListener(new View.OnClickListener() {
+        signInGGButton.setSize(SignInButton.SIZE_STANDARD);
+        signInGGButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
                 signIn();
+            }
+        });
+        //login with facebook account
+        callbackManager = CallbackManager.Factory.create();
+        signInFBButton.setReadPermissions(Arrays.asList("Email","Public profile"));
+
+        signInFBButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+            @Override
+            public void onSuccess(LoginResult loginResult) {
+
+            }
+
+            @Override
+            public void onCancel() {
+
+            }
+
+            @Override
+            public void onError(FacebookException error) {
+
             }
         });
 
     }
+
+    //init layout
+    private void initLayout(){
+        _userText = (EditText) findViewById(R.id.input_username);
+        _passwordText = (EditText) findViewById(R.id.input_password);
+        _loginButton = (Button) findViewById(R.id.btn_login);
+        _signupLink = (TextView) findViewById(R.id.link_signup);
+        signInGGButton = findViewById(R.id.btnGoogle);
+        signInFBButton = findViewById(R.id.btnFacebook);
+    }
+
     private void signIn(){
 //        GoogleSignInAccount acct = GoogleSignIn.getLastSignedInAccount(this);
 //        if (acct!=null){
@@ -215,6 +258,7 @@ public class LoginActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        callbackManager.onActivityResult(requestCode, resultCode, data);
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_SIGNUP) {
             if (resultCode == RESULT_OK) {
@@ -229,6 +273,46 @@ public class LoginActivity extends AppCompatActivity {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             handleSignInResult(task);
         }
+
+    }
+
+    AccessTokenTracker tokenTracker = new AccessTokenTracker() {
+        @Override
+        protected void onCurrentAccessTokenChanged(AccessToken oldAccessToken, AccessToken currentAccessToken) {
+            if (currentAccessToken==null){
+                Log.e("Facebook Account", "User logged out!");
+            }else{
+                loadFaceBookProfile(currentAccessToken);
+            }
+        }
+    };
+
+    private void loadFaceBookProfile(AccessToken accessToken){
+        GraphRequest request = GraphRequest.newMeRequest(accessToken, new GraphRequest.GraphJSONObjectCallback() {
+            @Override
+            public void onCompleted(JSONObject object, GraphResponse response) {
+                try {
+                    String first_name = object.getString("first_name");
+                    String last_name = object.getString("last_name");
+                    String email = object.getString("email");
+                    String id = object.getString("id");
+                    String image_url = "http://graph.facebook.com/"+id+"/picture?type=normal";
+
+                    Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                    Bundle bundle = new Bundle();
+                    bundle.putString("first_name", first_name);
+                    bundle.putString("last_name", last_name);
+                    bundle.putString("email", email);
+                    bundle.putString("id", id);
+                    bundle.putString("image_url", image_url);
+                    intent.putExtras(bundle);
+                    startActivity(intent);
+                }catch (JSONException e){
+                    e.printStackTrace();
+                }
+            }
+        });
+
     }
 
     private void handleSignInResult(Task<GoogleSignInAccount> completedTask) {
