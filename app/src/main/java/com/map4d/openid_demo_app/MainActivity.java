@@ -1,6 +1,7 @@
 package com.map4d.openid_demo_app;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.Activity;
@@ -36,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_LAYOUT = 101;
     GoogleSignInClient googleSignInClient;
     private GoogleApiClient mGoogleApiClient;
+    private static final int RC_MAIN = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
         }else {
             Intent intent = new Intent(this, LoginActivity.class);
             startActivity(intent);
+            finish();
         }
         getProfileGGAccount();
 
@@ -66,6 +69,19 @@ public class MainActivity extends AppCompatActivity {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+                if (requestCode == RC_MAIN) {
+            if (resultCode == RESULT_OK) {
+
+                // TODO: Implement successful signup logic here
+                // By default we just finish the Activity and log them in automatically
+                this.finish();
+            }
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     private void getProfileGGAccount(){
@@ -81,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
             tvName.setText(personName);
             tvEmail.setText(personEmail);
             Glide.with(this).load(String.valueOf(personPhoto)).into(imgAvatar);
-            saveAccount(personEmail);
+            //saveAccount(personEmail);
 
         }
     }

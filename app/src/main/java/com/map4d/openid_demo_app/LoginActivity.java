@@ -36,6 +36,7 @@ public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
     private static final int REQUEST_SIGNUP = 0;
     private static final int RC_SIGN_IN = 101;
+    private static final int RC_MAIN = 1;
     EditText _userText;
     EditText _passwordText;
     Button _loginButton;
@@ -61,11 +62,14 @@ public class LoginActivity extends AppCompatActivity {
         _loginButton = (Button) findViewById(R.id.btn_login);
         _signupLink = (TextView) findViewById(R.id.link_signup);
 
+
         _loginButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View v) {
-                login();
+                Username = _userText.getText().toString();
+                Password = _passwordText.getText().toString();
+                login(Username,Password);
             }
         });
 
@@ -97,26 +101,26 @@ public class LoginActivity extends AppCompatActivity {
 
     }
     private void signIn(){
-        GoogleSignInAccount acct = GoogleSignIn.getLastSignedInAccount(this);
-        if (acct!=null){
-            signOut();
-        }
+//        GoogleSignInAccount acct = GoogleSignIn.getLastSignedInAccount(this);
+//        if (acct!=null){
+//            signOut();
+//        }
         Intent signInIntent = googleSignInClient.getSignInIntent();
         startActivityForResult(signInIntent, RC_SIGN_IN);
     }
-    private void signOut() {
-        googleSignInClient.signOut()
-                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
-                        startActivity(intent);
-                        finish();
-                        //overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
-                    }
-                });
-    }
-    public void login() {
+//    private void signOut() {
+//        googleSignInClient.signOut()
+//                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
+//                    @Override
+//                    public void onComplete(@NonNull Task<Void> task) {
+//                        Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
+//                        startActivity(intent);
+//                        finish();
+//                        overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
+//                    }
+//                });
+//    }
+    public void login(String username , String password) {
         Log.d(TAG, "Login");
         if (!validate()) {
             onLoginFailed();
@@ -131,10 +135,8 @@ public class LoginActivity extends AppCompatActivity {
         progressDialog.setMessage("Authenticating...");
         progressDialog.show();
 
-        Username = _userText.getText().toString();
-        Password = _passwordText.getText().toString();
         Log.d("text",Username+", "+Password);
-        Check_login(Username, Password, Grant_type, Cliect_id, Client_secret);
+        Check_login(username, password, Grant_type, Cliect_id, Client_secret);
         // TODO: Implement your own authentication logic here.
         if (!check){
             new android.os.Handler().postDelayed(
@@ -185,28 +187,45 @@ public class LoginActivity extends AppCompatActivity {
     private void updateUI(GoogleSignInAccount account) {
         try {
 
-            String strData = "Name : " + account.getDisplayName();
-            Toast.makeText(getApplicationContext(),strData,Toast.LENGTH_LONG).show();
+            String strData = "" + account.getDisplayName();
+            //Toast.makeText(getApplicationContext(),strData,Toast.LENGTH_LONG).show();
+            Log.e("Name",strData);
+            Intent intent = new Intent(this, MainActivity.class);
+            startActivity(intent);
+//            startActivityForResult(intent, RC_MAIN);
+            finish();
+            //overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
 
         } catch (Exception ex) {
 // lblInfo.setText(ex.getMessage().toString());
         }
     }
 
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        // [START on_start_sign_in]
+        // Check for existing Google Sign In account, if the user is already signed in
+        // the GoogleSignInAccount will be non-null.
+        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
+        updateUI(account);
+        // [END on_start_sign_in]
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-//        if (requestCode == REQUEST_SIGNUP) {
-//            if (resultCode == RESULT_OK) {
-//
-//                // TODO: Implement successful signup logic here
-//                // By default we just finish the Activity and log them in automatically
-//                this.finish();
-//            }
-//        }
-        if (resultCode == RC_SIGN_IN){
-            Log.d("loginx", "Login with google account!");
+        if (requestCode == REQUEST_SIGNUP) {
+            if (resultCode == RESULT_OK) {
+
+                // TODO: Implement successful signup logic here
+                // By default we just finish the Activity and log them in automatically
+                this.finish();
+            }
+        }
+        if (requestCode == RC_SIGN_IN){
+            Log.e(TAG, "Login with google account!");
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             handleSignInResult(task);
         }
