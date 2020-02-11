@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
             finish();
         }
 
-        getdata();
+        //getdata();
 
     }
     private void getdata(){

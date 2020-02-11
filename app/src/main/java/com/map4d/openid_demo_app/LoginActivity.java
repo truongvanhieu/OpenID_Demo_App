@@ -117,6 +117,9 @@ public class LoginActivity extends AppCompatActivity {
         signInFBButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) {
+                Log.e("facebooktoken",""+loginResult.getAccessToken());
+                AccessToken accessToken = loginResult.getAccessToken();
+                loadFaceBookProfile(accessToken);
 
             }
 
@@ -127,7 +130,7 @@ public class LoginActivity extends AppCompatActivity {
 
             @Override
             public void onError(FacebookException error) {
-
+                Log.e("facebooktoken", "Failed!");
             }
         });
 
@@ -276,16 +279,16 @@ public class LoginActivity extends AppCompatActivity {
 
     }
 
-    AccessTokenTracker tokenTracker = new AccessTokenTracker() {
-        @Override
-        protected void onCurrentAccessTokenChanged(AccessToken oldAccessToken, AccessToken currentAccessToken) {
-            if (currentAccessToken==null){
-                Log.e("Facebook Account", "User logged out!");
-            }else{
-                loadFaceBookProfile(currentAccessToken);
-            }
-        }
-    };
+//    AccessTokenTracker tokenTracker = new AccessTokenTracker() {
+//        @Override
+//        protected void onCurrentAccessTokenChanged(AccessToken oldAccessToken, AccessToken currentAccessToken) {
+//            if (currentAccessToken==null){
+//                Log.e("Facebook Account", "User logged out!");
+//            }else{
+//                loadFaceBookProfile(currentAccessToken);
+//            }
+//        }
+//    };
 
     private void loadFaceBookProfile(AccessToken accessToken){
         GraphRequest request = GraphRequest.newMeRequest(accessToken, new GraphRequest.GraphJSONObjectCallback() {

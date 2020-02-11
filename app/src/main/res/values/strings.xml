@@ -3,7 +3,8 @@
     <string name="setting">Setting</string>
     <string name="title_activity_home">HomeActivity</string>
     <string name="logout">Logout</string>
-    <string name="facebook_app_id">198200644571502</string> <string name="fb_login_protocol_scheme">fb198200644571502</string>
     <string name="server_client_id">648165241067-07m6i75rh03v47sesmd5kcenskc440lr.apps.googleusercontent.com</string>
+    <string name="facebook_app_id">757520661321580</string> <string name="fb_login_protocol_scheme">fb757520661321580</string>
+
 
 </resources>
