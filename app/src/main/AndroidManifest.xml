@@ -15,14 +15,14 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
-        <activity android:name=".InfoActivity"></activity>
+        <activity android:name="com.map4d.openid_demo_app.InfoActivity"></activity>
         <activity
-            android:name=".SignUpActivity"
+            android:name="com.map4d.openid_demo_app.SignUpActivity"
             android:theme="@style/AppTheme.Dark" />
         <activity
-            android:name=".LoginActivity"
+            android:name="com.map4d.openid_demo_app.LoginActivity"
             android:theme="@style/AppTheme.Dark" />
-        <activity android:name=".MainActivity">
+        <activity android:name="com.map4d.openid_demo_app.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -48,6 +48,7 @@
                 <data android:scheme="@string/fb_login_protocol_scheme" />
             </intent-filter>
         </activity>
+
 
     </application>
 

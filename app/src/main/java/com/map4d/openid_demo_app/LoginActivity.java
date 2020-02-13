@@ -1,27 +1,29 @@
 package com.map4d.openid_demo_app;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.facebook.AccessToken;
-import com.facebook.AccessTokenManager;
-import com.facebook.AccessTokenTracker;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
+import com.facebook.FacebookSdk;
 import com.facebook.GraphRequest;
 import com.facebook.GraphResponse;
 import com.facebook.login.LoginResult;
@@ -32,23 +34,22 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.SignInButton;
 import com.google.android.gms.common.api.ApiException;
-import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.map4d.openid_demo_app.API.APIClient;
 import com.map4d.openid_demo_app.API_Interface.Login_interface;
 import com.map4d.openid_demo_app.Model.Model_loginApi;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "LoginActivity";
     private static final int REQUEST_SIGNUP = 0;
     private static final int RC_SIGN_IN = 101;
@@ -67,15 +68,37 @@ public class LoginActivity extends AppCompatActivity {
 
     GoogleSignInClient googleSignInClient;
     CallbackManager callbackManager;
+    Context context;
 
+    @SuppressLint("PackageManagerGetSignatures")
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
 
-        sharedpreferences = getSharedPreferences("AccessToken",
-                Context.MODE_PRIVATE);
+        FacebookSdk.sdkInitialize(getApplicationContext());
+        callbackManager = CallbackManager.Factory.create();
+        setContentView(R.layout.activity_login);
         initLayout();
+        PackageInfo info;
+        try {
+            info = getPackageManager().getPackageInfo("com.map4d.openid_demo_app", PackageManager.GET_SIGNATURES);
+            for (Signature signature : info.signatures) {
+                MessageDigest md;
+                md = MessageDigest.getInstance("SHA");
+                md.update(signature.toByteArray());
+                String something = new String(Base64.encode(md.digest(), 0));
+                //String something = new String(Base64.encodeBytes(md.digest()));
+                Log.e("hash key", something);
+            }
+        } catch (PackageManager.NameNotFoundException e1) {
+            Log.e("name not found", e1.toString());
+        } catch (NoSuchAlgorithmException e) {
+            Log.e("no such an algorithm", e.toString());
+        } catch (Exception e) {
+            Log.e("exception", e.toString());
+        }
+        sharedpreferences = getSharedPreferences("AccessToken", Context.MODE_PRIVATE);
+
         //login with SmartCodes using API
         _loginButton.setOnClickListener(new View.OnClickListener() {
 
@@ -83,7 +106,7 @@ public class LoginActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Username = _userText.getText().toString();
                 Password = _passwordText.getText().toString();
-                login(Username,Password);
+                login_OpenID(Username,Password);
             }
         });
 
@@ -110,30 +133,31 @@ public class LoginActivity extends AppCompatActivity {
                 signIn();
             }
         });
-        //login with facebook account
-        callbackManager = CallbackManager.Factory.create();
-        signInFBButton.setReadPermissions(Arrays.asList("Email","Public profile"));
 
+        //login with facebook account
+        signInFBButton = (LoginButton) findViewById(R.id.btnFacebook);
+        signInFBButton.setReadPermissions(Arrays.asList("public_profile","email"));
+
+        // Callback registration
         signInFBButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) {
-                Log.e("facebooktoken",""+loginResult.getAccessToken());
-                AccessToken accessToken = loginResult.getAccessToken();
-                loadFaceBookProfile(accessToken);
-
+                loadFaceBookProfile();
+                Toast.makeText(getApplicationContext(),"User ID: " + loginResult.getAccessToken().getUserId() + "\n" +
+                        "Auth Token: " + loginResult.getAccessToken().getToken(),Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onCancel() {
-
+                Toast.makeText(getApplicationContext(),"Login canceled.",Toast.LENGTH_SHORT).show();
             }
 
             @Override
-            public void onError(FacebookException error) {
-                Log.e("facebooktoken", "Failed!");
+            public void onError(FacebookException e) {
+                Toast.makeText(getApplicationContext(),"Login failed!!!   ",Toast.LENGTH_SHORT).show();
+                Log.e("ERROR", ""+e.getMessage());
             }
         });
-
     }
 
     //init layout
@@ -166,7 +190,7 @@ public class LoginActivity extends AppCompatActivity {
 //                    }
 //                });
 //    }
-    public void login(String username , String password) {
+    public void login_OpenID(String username , String password) {
         Log.d(TAG, "Login");
         if (!validate()) {
             onLoginFailed();
@@ -182,7 +206,7 @@ public class LoginActivity extends AppCompatActivity {
         progressDialog.show();
 
         Log.d("text",Username+", "+Password);
-        Check_login(username, password, Grant_type, Cliect_id, Client_secret);
+        Check_login_OpenID(username, password, Grant_type, Cliect_id, Client_secret);
         // TODO: Implement your own authentication logic here.
         if (!check){
             new android.os.Handler().postDelayed(
@@ -201,7 +225,7 @@ public class LoginActivity extends AppCompatActivity {
 
     }
 
-    private Boolean Check_login(String username, String password, String grant_type, String client_id, String client_secret){
+    private Boolean Check_login_OpenID(String username, String password, String grant_type, String client_id, String client_secret){
         check = false;
         Login_interface service = APIClient.getClient().create(Login_interface.class);
         Call<Model_loginApi> userCall = service.loginAccount(username, password, grant_type, client_id, client_secret);
@@ -219,7 +243,7 @@ public class LoginActivity extends AppCompatActivity {
 
                     }
                 }else {
-                    Toast.makeText(getApplicationContext(), "Login failed !", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "Đăng nhập không thành công!", Toast.LENGTH_SHORT).show();
                 }
             }
             @Override
@@ -230,7 +254,7 @@ public class LoginActivity extends AppCompatActivity {
         return check;
     }
 
-    private void updateUI(GoogleSignInAccount account) {
+    private void updateUI_AfterLoginGG(GoogleSignInAccount account) {
         try {
 
             String strData = "" + account.getDisplayName();
@@ -255,14 +279,16 @@ public class LoginActivity extends AppCompatActivity {
         // Check for existing Google Sign In account, if the user is already signed in
         // the GoogleSignInAccount will be non-null.
         GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
-        updateUI(account);
+        updateUI_AfterLoginGG(account);
         // [END on_start_sign_in]
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        callbackManager.onActivityResult(requestCode, resultCode, data);
+
+//        super.onActivityResult(requestCode, resultCode, data);
         super.onActivityResult(requestCode, resultCode, data);
+        callbackManager.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_SIGNUP) {
             if (resultCode == RESULT_OK) {
 
@@ -271,7 +297,7 @@ public class LoginActivity extends AppCompatActivity {
                 this.finish();
             }
         }
-        if (requestCode == RC_SIGN_IN){
+        if (requestCode == RC_SIGN_IN) {
             Log.e(TAG, "Login with google account!");
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             handleSignInResult(task);
@@ -290,31 +316,23 @@ public class LoginActivity extends AppCompatActivity {
 //        }
 //    };
 
-    private void loadFaceBookProfile(AccessToken accessToken){
-        GraphRequest request = GraphRequest.newMeRequest(accessToken, new GraphRequest.GraphJSONObjectCallback() {
+    private void loadFaceBookProfile(){
+        GraphRequest request = GraphRequest.newMeRequest(AccessToken.getCurrentAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
             @Override
             public void onCompleted(JSONObject object, GraphResponse response) {
-                try {
-                    String first_name = object.getString("first_name");
-                    String last_name = object.getString("last_name");
-                    String email = object.getString("email");
-                    String id = object.getString("id");
-                    String image_url = "http://graph.facebook.com/"+id+"/picture?type=normal";
 
-                    Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                    Bundle bundle = new Bundle();
-                    bundle.putString("first_name", first_name);
-                    bundle.putString("last_name", last_name);
-                    bundle.putString("email", email);
-                    bundle.putString("id", id);
-                    bundle.putString("image_url", image_url);
-                    intent.putExtras(bundle);
-                    startActivity(intent);
-                }catch (JSONException e){
-                    e.printStackTrace();
+                if (response.getError() == null) {
+                    Log.e("ERR", "no error");
+                } else {
+                    Log.e("ERR", "error");
                 }
             }
         });
+
+        Bundle parameters = new Bundle();
+        parameters.putString("fields", "id,name,email");
+        request.setParameters(parameters);
+        request.executeAsync();
 
     }
 
@@ -324,7 +342,7 @@ public class LoginActivity extends AppCompatActivity {
 
             // Signed in successfully, show authenticated UI.
             Log.e("request","Đăng nhập thành công!");
-            updateUI(account);
+            updateUI_AfterLoginGG(account);
         } catch (ApiException e) {
             // The ApiException status code indicates the detailed failure reason.
             // Please refer to the GoogleSignInStatusCodes class reference for more information.
@@ -387,5 +405,9 @@ public class LoginActivity extends AppCompatActivity {
         editor.apply();
     }
 
+    @Override
+    public void onClick(View view) {
+
+    }
 }
 
