@@ -66,7 +66,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     SharedPreferences sharedpreferences;
     boolean check = false;
 
-    GoogleSignInClient googleSignInClient;
+    public GoogleSignInClient googleSignInClient;
     CallbackManager callbackManager;
     Context context;
 
@@ -79,24 +79,24 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         callbackManager = CallbackManager.Factory.create();
         setContentView(R.layout.activity_login);
         initLayout();
-        PackageInfo info;
-        try {
-            info = getPackageManager().getPackageInfo("com.map4d.openid_demo_app", PackageManager.GET_SIGNATURES);
-            for (Signature signature : info.signatures) {
-                MessageDigest md;
-                md = MessageDigest.getInstance("SHA");
-                md.update(signature.toByteArray());
-                String something = new String(Base64.encode(md.digest(), 0));
-                //String something = new String(Base64.encodeBytes(md.digest()));
-                Log.e("hash key", something);
-            }
-        } catch (PackageManager.NameNotFoundException e1) {
-            Log.e("name not found", e1.toString());
-        } catch (NoSuchAlgorithmException e) {
-            Log.e("no such an algorithm", e.toString());
-        } catch (Exception e) {
-            Log.e("exception", e.toString());
-        }
+//        PackageInfo info;
+//        try {
+//            info = getPackageManager().getPackageInfo("com.map4d.openid_demo_app", PackageManager.GET_SIGNATURES);
+//            for (Signature signature : info.signatures) {
+//                MessageDigest md;
+//                md = MessageDigest.getInstance("SHA");
+//                md.update(signature.toByteArray());
+//                String something = new String(Base64.encode(md.digest(), 0));
+//                //String something = new String(Base64.encodeBytes(md.digest()));
+//                Log.e("hash key", something);
+//            }
+//        } catch (PackageManager.NameNotFoundException e1) {
+//            Log.e("name not found", e1.toString());
+//        } catch (NoSuchAlgorithmException e) {
+//            Log.e("no such an algorithm", e.toString());
+//        } catch (Exception e) {
+//            Log.e("exception", e.toString());
+//        }
         sharedpreferences = getSharedPreferences("AccessToken", Context.MODE_PRIVATE);
 
         //login with SmartCodes using API
@@ -143,8 +143,8 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
             @Override
             public void onSuccess(LoginResult loginResult) {
                 loadFaceBookProfile();
-                Toast.makeText(getApplicationContext(),"User ID: " + loginResult.getAccessToken().getUserId() + "\n" +
-                        "Auth Token: " + loginResult.getAccessToken().getToken(),Toast.LENGTH_SHORT).show();
+//                Toast.makeText(getApplicationContext(),"User ID: " + loginResult.getAccessToken().getUserId() + "\n" +
+//                        "Auth Token: " + loginResult.getAccessToken().getToken(),Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -260,7 +260,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
             String strData = "" + account.getDisplayName();
             //Toast.makeText(getApplicationContext(),strData,Toast.LENGTH_LONG).show();
             Log.e("Name",strData);
-            Intent intent = new Intent(this, MainActivity.class);
+            Intent intent = new Intent(this, HomeActivity.class);
             startActivity(intent);
 //            startActivityForResult(intent, RC_MAIN);
             finish();
@@ -323,6 +323,10 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
 
                 if (response.getError() == null) {
                     Log.e("ERR", "no error");
+                    Intent intent = new Intent(getApplicationContext(), HomeActivity.class);
+                    startActivityForResult(intent, RC_SIGN_IN);
+                    finish();
+                    overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
                 } else {
                     Log.e("ERR", "error");
                 }
@@ -358,7 +362,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
 
     public void onLoginSuccess() {
         _loginButton.setEnabled(true);
-        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+        Intent intent = new Intent(getApplicationContext(), HomeActivity.class);
         startActivityForResult(intent, RC_SIGN_IN);
         finish();
         overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
