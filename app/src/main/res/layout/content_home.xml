@@ -7,14 +7,50 @@
     tools:showIn="@layout/app_bar_home">
 
     <LinearLayout
+        android:id="@+id/map"
         android:layout_width="fill_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content">
 
         <fragment
             android:id="@+id/Map4D"
             class="vn.map4d.map4dsdk.maps.MFSupportMapFragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
+
     </LinearLayout>
+    <EditText
+        android:id="@+id/num1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="50dp"
+        android:inputType="number"
+        android:layout_marginRight="50dp"
+        android:layout_above="@+id/num2"/>
+    <EditText
+        android:id="@+id/num2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="50dp"
+        android:inputType="number"
+        android:layout_marginRight="50dp"
+        android:layout_above="@+id/check"/>
+    <Button
+        android:id="@+id/check"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="OK"
+        android:layout_centerHorizontal="true"
+        android:layout_alignBottom="@+id/tvsum"
+        android:layout_marginBottom="20dp"/>
+
+    <TextView
+        android:id="@+id/tvsum"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="50dp"
+        android:hint="Sum here"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"/>
+
 
 </RelativeLayout>

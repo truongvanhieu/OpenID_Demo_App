@@ -32,6 +32,7 @@ import com.google.android.material.snackbar.Snackbar;
 
 import android.os.CountDownTimer;
 import android.provider.Settings;
+import android.renderscript.Sampler;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -46,6 +47,8 @@ import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
 import com.google.android.material.navigation.NavigationView;
+import com.map4d.awesome_library.MyView;
+import com.map4d.awesome_library.SumNumber;
 
 import androidx.drawerlayout.widget.DrawerLayout;
 
@@ -53,6 +56,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import android.view.Menu;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -81,6 +86,11 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     LocationManager locationManager;
     Context context;
     private GoogleApiClient mGoogleApiClient;
+    SumNumber sumNumber;
+    private EditText num1, num2;
+    private TextView sum;
+    private Button check, login_logout;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,15 +106,20 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
 
         if (sharedpreferences.contains(AccessToken_Key)) {
             tvAccessToken.setText(sharedpreferences.getString(AccessToken_Key, ""));
+            login_logout.setVisibility(View.VISIBLE);
         }else if (gg!=null){
             //signOutAccountGoogle(gg);
             getProfileGGAccount();
+            login_logout.setVisibility(View.VISIBLE);
         }else if(isLoggedIn){
             getFaceBookProfile();
+            login_logout.setVisibility(View.VISIBLE);
+
         }else{
             Intent intent = new Intent(this, LoginActivity.class);
             startActivity(intent);
             finish();
+            login_logout.setVisibility(View.GONE);
         }
 
         //toolbar
@@ -122,16 +137,59 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     }
 
     private void initLayout(){
-        tvAccessToken = (TextView) findViewById(R.id.tvAccessToken);
-        tvName = (TextView) findViewById(R.id.tvName);
-        tvEmail = (TextView) findViewById(R.id.tvEmail);
-        imgAvatar = (ImageView) findViewById(R.id.imgAvatar);
-
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         View headerView = navigationView.getHeaderView(0);
         tvNav_Username = (TextView)headerView.findViewById(R.id.tvNav_Username);
         tvNav_Email = (TextView) headerView.findViewById(R.id.tvNav_Email);
         image_Avatar = (ImageView) headerView.findViewById(R.id.image_Avatar);
+        num1 = (EditText) findViewById(R.id.num1);
+        num2 = (EditText) findViewById(R.id.num2);
+        sum = (TextView) findViewById(R.id.tvsum);
+        check = (Button) findViewById(R.id.check);
+        check.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                testSum();
+            }
+        });
+        login_logout = (Button) headerView.findViewById(R.id.btnLogin_logout);
+        login_logout.setVisibility(View.GONE);
+        login_logout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                checkAccountStatus();
+            }
+
+
+        });
+
+    }
+    private void checkAccountStatus() {
+        GoogleSignInAccount acct = GoogleSignIn.getLastSignedInAccount(this);
+        if (sharedpreferences.contains(AccessToken_Key)) {
+            DeleteAccessToken(AccessToken_Key);
+            Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
+            startActivityForResult(intent, REQUEST_LAYOUT);
+            finish();
+            overridePendingTransition(R.anim.push_bottom_in, R.anim.push_top_out);
+        }else if(AccessToken.getCurrentAccessToken() != null)
+        {
+            LoginManager.getInstance().logOut();
+            Intent intent = new Intent(this, LoginActivity.class);
+            startActivityForResult(intent, REQUEST_LAYOUT);
+            finish();
+            overridePendingTransition(R.anim.push_bottom_in, R.anim.push_top_out);
+        }else{
+            signOutAccountGoogle(acct);
+        }
+    }
+    private void testSum(){
+        String n1 = num1.getText().toString();
+        String n2 = num2.getText().toString();
+        if (!n1.isEmpty() && !n2.isEmpty()){
+            double kq = SumNumber.getInstanceSum(Double.valueOf(n1),Double.valueOf(n2));
+            sum.setText("Kết quả là = "+kq);
+        }
     }
 
     @Override
@@ -303,7 +361,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         } else if (id == R.id.nav_show_Map) {
 //            Intent viewMap3D =new Intent(OnMapActivity.this, Mode3dActivity.class);
 //            startActivity(viewMap3D);
-        } else if (id == R.id.nav_logout) {
+        } else if (id == R.id.nav_account) {
 
         }
 

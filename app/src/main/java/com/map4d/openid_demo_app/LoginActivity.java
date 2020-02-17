@@ -145,6 +145,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                 loadFaceBookProfile();
 //                Toast.makeText(getApplicationContext(),"User ID: " + loginResult.getAccessToken().getUserId() + "\n" +
 //                        "Auth Token: " + loginResult.getAccessToken().getToken(),Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(),"Login Successful !",Toast.LENGTH_SHORT).show();
             }
 
             @Override
