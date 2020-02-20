@@ -12,12 +12,14 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.SignInButton;
 import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.map4d.openid_demo_app.Model.Model_loginApi;
@@ -36,6 +38,7 @@ public class InfoActivity extends AppCompatActivity {
     Model_loginApi model_loginApi;
     SharedPreferences sharedpreferences;
     boolean check = false;
+    private GoogleApiClient mGoogleApiClient;
 
     GoogleSignInClient googleSignInClient;
 
@@ -105,5 +108,16 @@ public class InfoActivity extends AppCompatActivity {
     public void onBackPressed() {
         // Disable going back to the MainActivity
         moveTaskToBack(true);
+    }
+    @Override
+    protected void onStart() {
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .build();
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
+                .build();
+        mGoogleApiClient.connect();
+        super.onStart();
     }
 }

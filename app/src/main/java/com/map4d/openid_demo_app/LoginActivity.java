@@ -7,11 +7,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.content.pm.Signature;
 import android.os.Bundle;
-import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -35,14 +31,12 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.SignInButton;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
-import com.map4d.openid_demo_app.API.APIClient;
-import com.map4d.openid_demo_app.API_Interface.Login_interface;
+import com.map4d.openid_demo_app.API.API_Vibus;
+import com.map4d.openid_demo_app.API_Interface.Account_interface;
 import com.map4d.openid_demo_app.Model.Model_loginApi;
 
 import org.json.JSONObject;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 import retrofit2.Call;
@@ -60,7 +54,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
     SignInButton signInGGButton;
     LoginButton signInFBButton;
     TextView _signupLink;
-    String Grant_type = "password", Cliect_id = "smartcodes-web", Client_secret = "66dce544-1619-4fe5-bf59-27a57c399880";
+    String Grant_type = "password", Cliect_id = "demo", Client_secret = "66dce544-1619-4fe5-bf59-27a57c399880";
     private String Username, Password;
     Model_loginApi model_loginApi;
     SharedPreferences sharedpreferences;
@@ -130,7 +124,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         signInGGButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                signIn();
+                signInGGAccount();
             }
         });
 
@@ -171,7 +165,41 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         signInFBButton = findViewById(R.id.btnFacebook);
     }
 
-    private void signIn(){
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        // [START on_start_sign_in]
+        // Check for existing Google Sign In account, if the user is already signed in
+        // the GoogleSignInAccount will be non-null.
+        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
+        updateUI_AfterLoginGG(account);
+        // [END on_start_sign_in]
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+
+//        super.onActivityResult(requestCode, resultCode, data);
+        super.onActivityResult(requestCode, resultCode, data);
+        callbackManager.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_SIGNUP) {
+            if (resultCode == RESULT_OK) {
+
+                // TODO: Implement successful signup logic here
+                // By default we just finish the Activity and log them in automatically
+                this.finish();
+            }
+        }
+        if (requestCode == RC_SIGN_IN) {
+            Log.e(TAG, "Login with google account!");
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            handleSignInResult(task);
+        }
+
+    }
+
+    private void signInGGAccount(){
 //        GoogleSignInAccount acct = GoogleSignIn.getLastSignedInAccount(this);
 //        if (acct!=null){
 //            signOut();
@@ -179,18 +207,8 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         Intent signInIntent = googleSignInClient.getSignInIntent();
         startActivityForResult(signInIntent, RC_SIGN_IN);
     }
-//    private void signOut() {
-//        googleSignInClient.signOut()
-//                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
-//                    @Override
-//                    public void onComplete(@NonNull Task<Void> task) {
-//                        Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
-//                        startActivity(intent);
-//                        finish();
-//                        overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
-//                    }
-//                });
-//    }
+
+    //login action
     public void login_OpenID(String username , String password) {
         Log.d(TAG, "Login");
         if (!validate()) {
@@ -226,9 +244,10 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
 
     }
 
+    //check login to Keycloak
     private Boolean Check_login_OpenID(String username, String password, String grant_type, String client_id, String client_secret){
         check = false;
-        Login_interface service = APIClient.getClient().create(Login_interface.class);
+        Account_interface service = API_Vibus.getClient().create(Account_interface.class);
         Call<Model_loginApi> userCall = service.loginAccount(username, password, grant_type, client_id, client_secret);
         userCall.enqueue(new Callback<Model_loginApi>() {
             @Override
@@ -239,9 +258,8 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
                     if (response.body()!=null){
                         Log.d("Data", ""+response.body().getAccess_token());
                         model_loginApi = response.body();
-                        Log.d("accessToken", ""+model_loginApi.getAccess_token());
-                        saveAccessToken(model_loginApi.getAccess_token());
-
+                        Log.d("accessToken", ""+model_loginApi.getAccess_token()+", "+model_loginApi.getRefresh_token()+", "+model_loginApi.getScope());
+                        saveDataUserToLocal(model_loginApi.getAccess_token(), model_loginApi.getRefresh_token());
                     }
                 }else {
                     Toast.makeText(getApplicationContext(), "Đăng nhập không thành công!", Toast.LENGTH_SHORT).show();
@@ -255,6 +273,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         return check;
     }
 
+    //update ui after login to GG
     private void updateUI_AfterLoginGG(GoogleSignInAccount account) {
         try {
 
@@ -272,51 +291,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         }
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-
-        // [START on_start_sign_in]
-        // Check for existing Google Sign In account, if the user is already signed in
-        // the GoogleSignInAccount will be non-null.
-        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
-        updateUI_AfterLoginGG(account);
-        // [END on_start_sign_in]
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-
-//        super.onActivityResult(requestCode, resultCode, data);
-        super.onActivityResult(requestCode, resultCode, data);
-        callbackManager.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_SIGNUP) {
-            if (resultCode == RESULT_OK) {
-
-                // TODO: Implement successful signup logic here
-                // By default we just finish the Activity and log them in automatically
-                this.finish();
-            }
-        }
-        if (requestCode == RC_SIGN_IN) {
-            Log.e(TAG, "Login with google account!");
-            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            handleSignInResult(task);
-        }
-
-    }
-
-//    AccessTokenTracker tokenTracker = new AccessTokenTracker() {
-//        @Override
-//        protected void onCurrentAccessTokenChanged(AccessToken oldAccessToken, AccessToken currentAccessToken) {
-//            if (currentAccessToken==null){
-//                Log.e("Facebook Account", "User logged out!");
-//            }else{
-//                loadFaceBookProfile(currentAccessToken);
-//            }
-//        }
-//    };
-
+    //load infor user from facebook
     private void loadFaceBookProfile(){
         GraphRequest request = GraphRequest.newMeRequest(AccessToken.getCurrentAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
             @Override
@@ -341,6 +316,7 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
 
     }
 
+    //handle sign in gg
     private void handleSignInResult(Task<GoogleSignInAccount> completedTask) {
         try {
             GoogleSignInAccount account = completedTask.getResult(ApiException.class);
@@ -404,9 +380,10 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         return valid;
     }
 
-    private void saveAccessToken(String accessToken){
+    private void saveDataUserToLocal(String accessToken, String refresh_token){
         SharedPreferences.Editor editor = sharedpreferences.edit();
         editor.putString("AccessToken", accessToken);
+        editor.putString("RefreshToken", refresh_token);
         editor.apply();
     }
 

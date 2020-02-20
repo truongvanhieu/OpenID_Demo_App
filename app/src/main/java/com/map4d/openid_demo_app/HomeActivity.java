@@ -1,6 +1,7 @@
 package com.map4d.openid_demo_app;
 
 import android.Manifest;
+import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -25,14 +26,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.snackbar.Snackbar;
 
-import android.os.CountDownTimer;
 import android.provider.Settings;
-import android.renderscript.Sampler;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -41,14 +36,15 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.core.app.ActivityCompat;
 import androidx.core.view.GravityCompat;
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
-import androidx.navigation.ui.NavigationUI;
 
 import com.google.android.material.navigation.NavigationView;
-import com.map4d.awesome_library.MyView;
 import com.map4d.awesome_library.SumNumber;
+import com.map4d.openid_demo_app.API.API_Smartcode;
+import com.map4d.openid_demo_app.API.API_Vibus;
+import com.map4d.openid_demo_app.API_Interface.API_Smartcode_Interface;
+import com.map4d.openid_demo_app.API_Interface.Account_interface;
+import com.map4d.openid_demo_app.Model.Model_Smartcode_Data;
 
 import androidx.drawerlayout.widget.DrawerLayout;
 
@@ -59,22 +55,30 @@ import android.view.Menu;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import okhttp3.ResponseBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import vn.map4d.map4dsdk.maps.LatLng;
 import vn.map4d.map4dsdk.maps.Map4D;
 import vn.map4d.map4dsdk.maps.OnMapReadyCallback;
 
 public class HomeActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback, LocationListener {
 
+    private static final int REQUEST_LOCATION = 200;
     private AppBarConfiguration mAppBarConfiguration;
     SharedPreferences sharedpreferences;
-    String AccessToken_Key = "AccessToken";
+    String AccessToken_Key = "AccessToken", RefreshToken_key = "RefreshToken";
+    String Grant_type = "password", Cliect_id = "demo", Client_secret = "66dce544-1619-4fe5-bf59-27a57c399880", refreshToken;
     private String personName, personGivenName, personFamilyName, personEmail = "Email", personId;
-    TextView tvAccessToken, tvName, tvEmail, tvNav_Username, tvNav_Email;
+    TextView tvName, tvEmail, tvNav_Username, tvNav_Email;
     ImageView imgAvatar, image_Avatar;
     private static final int REQUEST_LAYOUT = 101;
     private GoogleApiClient oogleApiClient;
@@ -87,9 +91,17 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     Context context;
     private GoogleApiClient mGoogleApiClient;
     SumNumber sumNumber;
-    private EditText num1, num2;
-    private TextView sum;
+    private TextView tvSmartCode, tvCompoundCode, tvLatlng;
+    private LinearLayout layoutSmartcode;
     private Button check, login_logout;
+    private boolean status;
+    private Location location;
+    private String latlng;
+    Model_Smartcode_Data model_smartcode_data;
+    ImageView img_Menu;
+    DrawerLayout drawer;
+    NavigationView navigationView;
+    ActionBarDrawerToggle toggle;
 
 
     @Override
@@ -105,7 +117,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         boolean isLoggedIn = accessToken != null && !accessToken.isExpired();
 
         if (sharedpreferences.contains(AccessToken_Key)) {
-            tvAccessToken.setText(sharedpreferences.getString(AccessToken_Key, ""));
+            Log.d("AccessToken", sharedpreferences.getString(AccessToken_Key, ""));
             login_logout.setVisibility(View.VISIBLE);
         }else if (gg!=null){
             //signOutAccountGoogle(gg);
@@ -122,17 +134,56 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             login_logout.setVisibility(View.GONE);
         }
 
-        //toolbar
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+//        //toolbar
+//        Toolbar toolbar = findViewById(R.id.toolbar);
+//        setSupportActionBar(toolbar);
         //Navigation
-        DrawerLayout drawer = findViewById(R.id.drawer_layout);
-        NavigationView navigationView = findViewById(R.id.nav_view);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.addDrawerListener(toggle);
-        toggle.syncState();
+        toggle = new ActionBarDrawerToggle(
+                this, drawer, null, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+
+        img_Menu.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                drawer.addDrawerListener(toggle);
+                toggle.syncState();
+            }
+        });
         navigationView.setNavigationItemSelectedListener(HomeActivity.this);
+
+    }
+
+    private void getDataSmartcode(final Double latitude, final Double longitude) {
+        layoutSmartcode.setVisibility(View.GONE);
+        latlng = latitude+","+longitude;
+        Log.d("Location", latlng);
+        API_Smartcode_Interface service = API_Smartcode.getClient().create(API_Smartcode_Interface.class);
+        Call<Model_Smartcode_Data> userCall = service.getSmartcodeData(latlng);
+        userCall.enqueue(new Callback<Model_Smartcode_Data>() {
+            @Override
+            public void onResponse(Call<Model_Smartcode_Data> call, Response<Model_Smartcode_Data> response) {
+                //onSignupSuccess();
+                if (response.isSuccessful()) {
+                    if (response.body()!=null){
+                        Log.d("DataSmartCode", ""+response.body().getCode());
+                        model_smartcode_data = response.body();
+                        if (model_smartcode_data!=null) {
+                            tvSmartCode.setText(model_smartcode_data.getResults().getSmartCode());
+                            tvCompoundCode.setText(model_smartcode_data.getResults().getCompoundCode());
+                            tvLatlng.setText(latitude+","+longitude);
+                            layoutSmartcode.setVisibility(View.VISIBLE);
+                            //Toast.makeText(getApplicationContext(), model_smartcode_data.getResults().getSmartCode(), Toast.LENGTH_SHORT).show();
+                        }
+
+                    }
+                }else {
+                    Log.d("DataSmartCode", "null");
+                }
+            }
+            @Override
+            public void onFailure(Call<Model_Smartcode_Data> call, Throwable t) {
+                Log.d("Failed: ", t.toString());
+            }
+        });
 
     }
 
@@ -142,16 +193,15 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         tvNav_Username = (TextView)headerView.findViewById(R.id.tvNav_Username);
         tvNav_Email = (TextView) headerView.findViewById(R.id.tvNav_Email);
         image_Avatar = (ImageView) headerView.findViewById(R.id.image_Avatar);
-        num1 = (EditText) findViewById(R.id.num1);
-        num2 = (EditText) findViewById(R.id.num2);
-        sum = (TextView) findViewById(R.id.tvsum);
-        check = (Button) findViewById(R.id.check);
-        check.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                testSum();
-            }
-        });
+        tvSmartCode = (TextView) findViewById(R.id.tvSmartCode);
+        tvCompoundCode = (TextView) findViewById(R.id.tvCompoundCode);
+        tvLatlng = (TextView) findViewById(R.id.tvLatlng);
+        layoutSmartcode = (LinearLayout) findViewById(R.id.layoutSmartCode);
+        layoutSmartcode.setVisibility(View.GONE);
+        img_Menu = (ImageView) findViewById(R.id.btn_menu);
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
+        navigationView = findViewById(R.id.nav_view);
+
         login_logout = (Button) headerView.findViewById(R.id.btnLogin_logout);
         login_logout.setVisibility(View.GONE);
         login_logout.setOnClickListener(new View.OnClickListener() {
@@ -167,28 +217,12 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     private void checkAccountStatus() {
         GoogleSignInAccount acct = GoogleSignIn.getLastSignedInAccount(this);
         if (sharedpreferences.contains(AccessToken_Key)) {
-            DeleteAccessToken(AccessToken_Key);
-            Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
-            startActivityForResult(intent, REQUEST_LAYOUT);
-            finish();
-            overridePendingTransition(R.anim.push_bottom_in, R.anim.push_top_out);
+            signOutAccountKeycloak();
         }else if(AccessToken.getCurrentAccessToken() != null)
         {
-            LoginManager.getInstance().logOut();
-            Intent intent = new Intent(this, LoginActivity.class);
-            startActivityForResult(intent, REQUEST_LAYOUT);
-            finish();
-            overridePendingTransition(R.anim.push_bottom_in, R.anim.push_top_out);
+            signOutAccountFacebook();
         }else{
-            signOutAccountGoogle(acct);
-        }
-    }
-    private void testSum(){
-        String n1 = num1.getText().toString();
-        String n2 = num2.getText().toString();
-        if (!n1.isEmpty() && !n2.isEmpty()){
-            double kq = SumNumber.getInstanceSum(Double.valueOf(n1),Double.valueOf(n2));
-            sum.setText("Kết quả là = "+kq);
+            signOutAccountGoogle();
         }
     }
 
@@ -219,36 +253,84 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_log_out) {
             if (sharedpreferences.contains(AccessToken_Key)) {
-                DeleteAccessToken(AccessToken_Key);
-                Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
-                startActivityForResult(intent, REQUEST_LAYOUT);
-                finish();
-                overridePendingTransition(R.anim.push_bottom_in, R.anim.push_top_out);
-            }else if(AccessToken.getCurrentAccessToken() != null)
-            {
-                LoginManager.getInstance().logOut();
-                Intent intent = new Intent(this, LoginActivity.class);
-                startActivityForResult(intent, REQUEST_LAYOUT);
-                finish();
-                overridePendingTransition(R.anim.push_bottom_in, R.anim.push_top_out);
+                signOutAccountKeycloak();
+            }else if(AccessToken.getCurrentAccessToken() != null) {
+                signOutAccountFacebook();
             }else{
-                signOutAccountGoogle(acct);
+                signOutAccountGoogle();
             }
         }
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    protected void onStart() {
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestEmail()
-                .build();
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
-                .build();
-        mGoogleApiClient.connect();
-        super.onStart();
+    private void signOutAccountKeycloak() {
+        refreshToken = sharedpreferences.getString(RefreshToken_key,"");
+        Log.e("Refresh_token", refreshToken+"");
+        Log.e("Refresh_token", refreshToken+"");
+        signOut_KeyCloak(Cliect_id, refreshToken);
+        if (!status){
+            Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
+            startActivityForResult(intent, REQUEST_LAYOUT);
+            finish();
+            overridePendingTransition(R.anim.push_bottom_in, R.anim.push_top_out);
+            DeleteAccessToken();
+        }else{
+            Log.d("Logout","Failed!!");
+        }
     }
+
+    private void signOutAccountFacebook() {
+        LoginManager.getInstance().logOut();
+        Intent intent = new Intent(this, LoginActivity.class);
+        startActivityForResult(intent, REQUEST_LAYOUT);
+        finish();
+        overridePendingTransition(R.anim.push_bottom_in, R.anim.push_top_out);
+        Toast.makeText(getApplicationContext(), "Đăng xuất thành công !", Toast.LENGTH_SHORT).show();
+    }
+
+    private void signOutAccountGoogle() {
+        Auth.GoogleSignInApi.signOut(mGoogleApiClient).setResultCallback(
+                new ResultCallback<Status>() {
+                    @Override
+                    public void onResult(Status status) {
+                        // ...
+                        Toast.makeText(getApplicationContext(), "Đăng xuất thành công !", Toast.LENGTH_SHORT).show();
+                        Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
+                        startActivityForResult(intent, RC_MAIN);
+                        finish();
+                        overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
+                    }
+                });
+
+    }
+
+    private Boolean signOut_KeyCloak(String client_id, String refreshToken){
+        status = false;
+        Account_interface service = API_Vibus.getClient().create(Account_interface.class);
+        Call<ResponseBody> userCall = service.logoutAccount(client_id, refreshToken);
+        userCall.enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                //onSignupSuccess();
+                if (response.isSuccessful()) {
+                    status = true;
+                    if (response.body()!=null){
+                        Log.d("Data", ""+response.body().toString());
+
+                    }
+                    Toast.makeText(getApplicationContext(), "Đăng xuất thành công !", Toast.LENGTH_SHORT).show();
+                }else {
+                    Toast.makeText(getApplicationContext(), "Đăng xuất không thành công !", Toast.LENGTH_SHORT).show();
+                }
+            }
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                Log.d("Failed: ", t.toString());
+            }
+        });
+        return status;
+    }
+
 
     //get facebook profile
     private void getFaceBookProfile(){
@@ -264,6 +346,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                         String first_name = object.getString("first_name");
                         String last_name = object.getString("last_name");
                         String image_url = "https://graph.facebook.com/"+id+"/picture?type=normal";
+                        Log.d("Data_user_FB", object.toString());
 
                         tvNav_Email.setText(email);
                         tvNav_Username.setText(first_name+" "+last_name);
@@ -291,65 +374,49 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     private void getProfileGGAccount(){
         GoogleSignInAccount acct = GoogleSignIn.getLastSignedInAccount(this);
         if (acct != null) {
+
             personName = acct.getDisplayName();
             personGivenName = acct.getGivenName();
             personFamilyName = acct.getFamilyName();
             personEmail = acct.getEmail();
             personId = acct.getId();
             Uri personPhoto = acct.getPhotoUrl();
+            String idToken =acct.getIdToken();
+            String serverAuthCode = acct.getServerAuthCode();
+            Log.d("get_data_from_gg",
+                    "DisplayName: "+personName+
+                            "GivenName: "+ personGivenName+
+                            "FamilyName: "+personFamilyName+
+                            "Email: "+personEmail+
+                            "Id: "+personId+
+                            "PhotoUrl: "+personPhoto.toString()+
+                            "IdToken: "+idToken+
+                            "ServerAuthCode: "+ serverAuthCode);
 
+            //set layout
             tvNav_Username.setText(personName);
             tvNav_Email.setText(personEmail);
             Glide.with(this).load(String.valueOf(personPhoto)).into(image_Avatar);
             //saveAccount(personEmail);
-
         }
     }
 
-    private boolean isSignedIn() {
-        return GoogleSignIn.getLastSignedInAccount(HomeActivity.this) != null;
-    }
-
-    private void signOutAccountGoogle(GoogleSignInAccount account) {
-//        if (account!=null) {
-//            if (isSignedIn()) {
-//                HomeActivity.this.googleSignInClient.signOut()
-//                        .addOnCompleteListener(this, new OnCompleteListener<Void>() {
-//                            @Override
-//                            public void onComplete(@NonNull Task<Void> task) {
-//                                Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
-//                                startActivityForResult(intent, RC_MAIN);
-//                                finish();
-//                                overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
-//
-//                                //overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
-//                            }
-//                        });
-//            }else {
-//                Log.e("googleSignInClient","Null");
-//            }
-//        }else{
-//            Log.e("Account","Null");
-//        }
-        Auth.GoogleSignInApi.signOut(mGoogleApiClient).setResultCallback(
-                new ResultCallback<Status>() {
-                    @Override
-                    public void onResult(Status status) {
-                        // ...
-                        Toast.makeText(getApplicationContext(),"Logged Out",Toast.LENGTH_SHORT).show();
-                        Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
-                        startActivityForResult(intent, RC_MAIN);
-                        finish();
-                        overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
-                    }
-                });
-
-    }
-
-    private void DeleteAccessToken(String accessToken){
+    private void DeleteAccessToken(){
         SharedPreferences.Editor editor = sharedpreferences.edit();
         editor.clear();
         editor.apply();
+    }
+
+    @Override
+    protected void onStart() {
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .build();
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
+                .build();
+        mGoogleApiClient.connect();
+        super.onStart();
     }
 
     @Override
@@ -362,7 +429,12 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
 //            Intent viewMap3D =new Intent(OnMapActivity.this, Mode3dActivity.class);
 //            startActivity(viewMap3D);
         } else if (id == R.id.nav_account) {
-
+            if (tvNav_Email!=null){
+                Intent intent =new Intent(HomeActivity.this, InfoActivity.class);
+                startActivityForResult(intent, RC_MAIN);
+                finish();
+                overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
+            }
         }
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -391,10 +463,16 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     }
 
     @Override
-    public void onMapReady(final Map4D map4D) {
+    public void onMapReady(Map4D map4D) {
         this.map4D = map4D;
-
         configure_button();
+        map4D.setOnMapClickListener(new Map4D.OnMapClickListener() {
+            @Override
+            public void onMapClick(LatLng latLng) {
+                getDataSmartcode(latLng.getLatitude(), latLng.getLongitude());
+            }
+        });
+
         //auto load my location
         map4D.setOnMyLocationClickListener(new Map4D.OnMyLocationClickListener() {
             @Override
@@ -413,55 +491,55 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             return;
         }
         map4D.setMyLocationEnabled(true);
-//        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-//        listener = new LocationListener() {
-//            @Override
-//            public void onLocationChanged(final Location location) {
-////                latitude = location.getLatitude();
-////                longitude = location.getLongitude();
-////                tvstreet.setText("Tên đường: "+streetName);
-////                tvaddress.setText("Địa chỉ: "+addressName);
-////                CountDownTimer countDownTimer = new CountDownTimer(86400000,5000) {
-////                    @Override
-////                    public void onTick(long l) {
-////                        if (latitude!=null&&longitude!=null){
-////                            Log.d("track...:","lat: "+latitude+", lon: "+longitude);
-////                        }
-////                    }
-////                    @Override
-////                    public void onFinish() {
-////                    }
-////                };
-////                countDownTimer.start();
-//            }
-//            @Override
-//            public void onStatusChanged(String s, int i, Bundle bundle) {
-//
-//            }
-//
-//            @Override
-//            public void onProviderEnabled(String s) {
-//
-//            }
-//
-//            @Override
-//            public void onProviderDisabled(String s) {
-//                Intent i = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-//                startActivity(i);
-//            }
-//        };
-//
-//        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//            // TODO: Consider calling
-//            //    ActivityCompat#requestPermissions
-//            // here to request the missing permissions, and then overriding
-//            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-//            //                                          int[] grantResults)
-//            // to handle the case where the user grants the permission. See the documentation
-//            // for ActivityCompat#requestPermissions for more details.
-//            return;
-//        }
-//        locationManager.requestLocationUpdates("gps", 100, 0, listener);
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        listener = new LocationListener() {
+            @Override
+            public void onLocationChanged(final Location location) {
+//                latitude = location.getLatitude();
+//                longitude = location.getLongitude();
+//                tvstreet.setText("Tên đường: "+streetName);
+//                tvaddress.setText("Địa chỉ: "+addressName);
+//                CountDownTimer countDownTimer = new CountDownTimer(86400000,5000) {
+//                    @Override
+//                    public void onTick(long l) {
+//                        if (latitude!=null&&longitude!=null){
+//                            Log.d("track...:","lat: "+latitude+", lon: "+longitude);
+//                        }
+//                    }
+//                    @Override
+//                    public void onFinish() {
+//                    }
+//                };
+//                countDownTimer.start();
+            }
+            @Override
+            public void onStatusChanged(String s, int i, Bundle bundle) {
+
+            }
+
+            @Override
+            public void onProviderEnabled(String s) {
+
+            }
+
+            @Override
+            public void onProviderDisabled(String s) {
+                Intent i = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                startActivity(i);
+            }
+        };
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        locationManager.requestLocationUpdates("gps", 100, 0, listener);
 
     }
 }

@@ -5,8 +5,8 @@ import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class APIClient {
-    private static String baseURL ="https://accounts.smartcodes.vn";
+public class API_Vibus {
+    private static String baseURL ="https://accounts.vibus.vn";
     private static Retrofit retrofit = null;
     public static Retrofit getClient() {
         HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
@@ -19,5 +19,4 @@ public class APIClient {
                 .build();
         return retrofit;
     }
-
 }
