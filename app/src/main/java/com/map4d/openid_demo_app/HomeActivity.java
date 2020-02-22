@@ -29,6 +29,7 @@ import com.google.android.gms.common.api.Status;
 
 import android.provider.Settings;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
 
@@ -66,6 +67,12 @@ import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+import vn.map4d.map4dsdk.annotations.MFBitmapDescriptorFactory;
+import vn.map4d.map4dsdk.annotations.MFCircle;
+import vn.map4d.map4dsdk.annotations.MFMarker;
+import vn.map4d.map4dsdk.annotations.MFMarkerOptions;
+import vn.map4d.map4dsdk.annotations.MFPolyline;
+import vn.map4d.map4dsdk.camera.MFCameraUpdateFactory;
 import vn.map4d.map4dsdk.maps.LatLng;
 import vn.map4d.map4dsdk.maps.Map4D;
 import vn.map4d.map4dsdk.maps.OnMapReadyCallback;
@@ -85,23 +92,25 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
 
     GoogleSignInClient googleSignInClient;
     private static final int RC_MAIN = 1;
-    private Map4D map4D;
-    LocationListener listener;
-    LocationManager locationManager;
+    private Map4D map;
+    private MFPolyline polyline;
+    private MFCircle circle;
+    private MFMarker marker;
+    private LocationManager locationManager;
+    private LocationListener listener;
     Context context;
     private GoogleApiClient mGoogleApiClient;
     SumNumber sumNumber;
     private TextView tvSmartCode, tvCompoundCode, tvLatlng;
     private LinearLayout layoutSmartcode;
-    private Button check, login_logout;
+    private Button check, login, logout;
     private boolean status;
+    private Double latitude, longitude;
     private Location location;
     private String latlng;
     Model_Smartcode_Data model_smartcode_data;
     ImageView img_Menu;
     DrawerLayout drawer;
-    NavigationView navigationView;
-    ActionBarDrawerToggle toggle;
 
 
     @Override
@@ -118,37 +127,36 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
 
         if (sharedpreferences.contains(AccessToken_Key)) {
             Log.d("AccessToken", sharedpreferences.getString(AccessToken_Key, ""));
-            login_logout.setVisibility(View.VISIBLE);
+            logout.setVisibility(View.VISIBLE);
         }else if (gg!=null){
             //signOutAccountGoogle(gg);
             getProfileGGAccount();
-            login_logout.setVisibility(View.VISIBLE);
+            logout.setVisibility(View.VISIBLE);
         }else if(isLoggedIn){
             getFaceBookProfile();
-            login_logout.setVisibility(View.VISIBLE);
+            logout.setVisibility(View.VISIBLE);
 
         }else{
-            Intent intent = new Intent(this, LoginActivity.class);
-            startActivity(intent);
-            finish();
-            login_logout.setVisibility(View.GONE);
+//            Intent intent = new Intent(this, LoginActivity.class);
+//            startActivity(intent);
+//            finish();
+            logout.setVisibility(View.GONE);
+            login.setVisibility(View.VISIBLE);
         }
 
 //        //toolbar
 //        Toolbar toolbar = findViewById(R.id.toolbar);
 //        setSupportActionBar(toolbar);
         //Navigation
-        toggle = new ActionBarDrawerToggle(
-                this, drawer, null, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-
+        drawer = findViewById(R.id.drawer_layout);
+        NavigationView navigationView = findViewById(R.id.nav_view);
         img_Menu.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                drawer.addDrawerListener(toggle);
-                toggle.syncState();
+                drawer.openDrawer(Gravity.LEFT);
             }
         });
-        navigationView.setNavigationItemSelectedListener(HomeActivity.this);
+        navigationView.setNavigationItemSelectedListener(this);
 
     }
 
@@ -199,22 +207,31 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         layoutSmartcode = (LinearLayout) findViewById(R.id.layoutSmartCode);
         layoutSmartcode.setVisibility(View.GONE);
         img_Menu = (ImageView) findViewById(R.id.btn_menu);
-        DrawerLayout drawer = findViewById(R.id.drawer_layout);
-        navigationView = findViewById(R.id.nav_view);
 
-        login_logout = (Button) headerView.findViewById(R.id.btnLogin_logout);
-        login_logout.setVisibility(View.GONE);
-        login_logout.setOnClickListener(new View.OnClickListener() {
+        logout = (Button) headerView.findViewById(R.id.btnLogout);
+        logout.setVisibility(View.GONE);
+        logout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                checkAccountStatus();
+                checkAccountStatusForLogout();
             }
 
 
         });
+        login = (Button) headerView.findViewById(R.id.btnLogin);
+        login.setVisibility(View.GONE);
+        login.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
+                startActivityForResult(intent, RC_MAIN);
+                finish();
+                overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
+            }
+        });
 
     }
-    private void checkAccountStatus() {
+    private void checkAccountStatusForLogout() {
         GoogleSignInAccount acct = GoogleSignIn.getLastSignedInAccount(this);
         if (sharedpreferences.contains(AccessToken_Key)) {
             signOutAccountKeycloak();
@@ -464,12 +481,16 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
 
     @Override
     public void onMapReady(Map4D map4D) {
-        this.map4D = map4D;
+        map = map4D;
         configure_button();
+        //map4D.animateCamera(MFCameraUpdateFactory.newLatLngZoom(latLng,16.0f));
         map4D.setOnMapClickListener(new Map4D.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
-                getDataSmartcode(latLng.getLatitude(), latLng.getLongitude());
+                Double lat = latLng.getLatitude();
+                Double lng = latLng.getLongitude();
+                //addMakerToMap(lat, lng);
+                getDataSmartcode(lat, lng);
             }
         });
 
@@ -490,13 +511,13 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             }
             return;
         }
-        map4D.setMyLocationEnabled(true);
+        map.setMyLocationEnabled(true);
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         listener = new LocationListener() {
             @Override
             public void onLocationChanged(final Location location) {
-//                latitude = location.getLatitude();
-//                longitude = location.getLongitude();
+                latitude = location.getLatitude();
+                longitude = location.getLongitude();
 //                tvstreet.setText("Tên đường: "+streetName);
 //                tvaddress.setText("Địa chỉ: "+addressName);
 //                CountDownTimer countDownTimer = new CountDownTimer(86400000,5000) {
@@ -541,5 +562,16 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         }
         locationManager.requestLocationUpdates("gps", 100, 0, listener);
 
+    }
+
+    private void addMakerToMap(Double lat, Double lng){
+        if (marker!=null){
+            marker.remove();
+        }
+        if (lat!=null && lng!=null) {
+            marker = map.addMarker(new MFMarkerOptions()
+                    .position(new LatLng(lat, lng))
+                    .icon(MFBitmapDescriptorFactory.fromResource(R.drawable.location)));
+        }
     }
 }

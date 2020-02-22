@@ -22,7 +22,7 @@
             android:title="@string/menu_tools" />
     </group>
 
-    <item android:title="Communicate">
+    <item android:title="Thông Chi tiết">
         <menu>
             <item
                 android:id="@+id/nav_account"
@@ -31,7 +31,7 @@
             <item
                 android:id="@+id/nav_profile"
                 android:icon="@drawable/ic_info"
-                android:title="@string/infor" />
+                android:title="@string/Introduce" />
 
         </menu>
     </item>

@@ -18,12 +18,35 @@
             android:layout_height="match_parent" />
 
     </LinearLayout>
-    <ImageView
-        android:id="@+id/btn_menu"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_menu"
-        android:layout_margin="20dp"/>
+        android:layout_margin="20dp">
+        <ImageView
+            android:id="@+id/btn_menu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_menu" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="5dp"
+            android:textSize="16sp"
+            android:textColor="@color/black"
+            android:text="SmartCodes"/>
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_margin="20dp">
+        <ImageView
+            android:id="@+id/btnSearch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_search" />
+    </LinearLayout>
+
     <LinearLayout
         android:id="@+id/layoutSmartCode"
         android:layout_width="match_parent"
@@ -34,7 +57,7 @@
         android:layout_centerHorizontal="true"
         android:layout_marginLeft="30dp"
         android:layout_marginRight="30dp"
-        android:layout_marginBottom="20dp">
+        android:layout_marginBottom="80dp">
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
