@@ -24,6 +24,11 @@
     <string name="infor">Thông tin</string>
     <string name="account">Tài khoản</string>
     <string name="Introduce">Giới thiệu</string>
+    <string name="Intro_title_1">MÃ SMARTCODES LÀ GÌ?</string>
+    <string name="Intro_line_1">SmartCodes tương tự địa chỉ giúp mọi người xác định được vị trí dễ dàng. SmartCodes là sự kết hợp giữa mã bưu chính, thông tin địa chỉ và giá trị tọa độ vị trí.</string>
+    <string name="Intro_line_2">SmartCodes cung cấp địa chỉ cho mọi người, ở mọi nơi, cho phép họ nhận giao hàng, truy cập các dịch vụ y tế, cứu nạn khẩn cấp, ... thuận tiện.</string>
+    <string name="Intro_line_3">Với SmartCodes thông tin địa chỉ, tên đường, tên đơn vị hành chính, vị trí tọa độ được mã hóa dưới dạng dãy số ngắn và tồn tại bất kỳ nơi đâu kể cả nơi chưa có đường.</string>
+    <string name="Intro_title_2">SMARTCODES ĐỘC ĐÁO NHƯ THẾ NÀO?</string>
 
 
 </resources>

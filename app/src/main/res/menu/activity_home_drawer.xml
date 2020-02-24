@@ -8,18 +8,6 @@
             android:id="@+id/nav_home"
             android:icon="@drawable/ic_home"
             android:title="@string/menu_home" />
-        <item
-            android:id="@+id/nav_show_Map"
-            android:icon="@drawable/ic_menu_gallery"
-            android:title="@string/show_map" />
-        <item
-            android:id="@+id/nav_slideshow"
-            android:icon="@drawable/ic_menu_slideshow"
-            android:title="@string/menu_slideshow" />
-        <item
-            android:id="@+id/nav_tools"
-            android:icon="@drawable/ic_menu_manage"
-            android:title="@string/menu_tools" />
     </group>
 
     <item android:title="Thông Chi tiết">
@@ -29,7 +17,7 @@
                 android:icon="@drawable/ic_account"
                 android:title="@string/account" />
             <item
-                android:id="@+id/nav_profile"
+                android:id="@+id/nav_introduce"
                 android:icon="@drawable/ic_info"
                 android:title="@string/Introduce" />
 

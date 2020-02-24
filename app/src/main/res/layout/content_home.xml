@@ -12,8 +12,8 @@
         android:layout_height="wrap_content">
 
         <fragment
-            android:id="@+id/Map4D"
-            class="vn.map4d.map4dsdk.maps.MFSupportMapFragment"
+            android:id="@+id/map2D"
+            class="vn.map4d.map.core.MFSupportMapFragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 

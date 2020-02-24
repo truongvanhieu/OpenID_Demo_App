@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -28,6 +29,8 @@ import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 
 import android.provider.Settings;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.MenuItem;
@@ -67,15 +70,16 @@ import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import vn.map4d.map4dsdk.annotations.MFBitmapDescriptorFactory;
-import vn.map4d.map4dsdk.annotations.MFCircle;
-import vn.map4d.map4dsdk.annotations.MFMarker;
-import vn.map4d.map4dsdk.annotations.MFMarkerOptions;
-import vn.map4d.map4dsdk.annotations.MFPolyline;
-import vn.map4d.map4dsdk.camera.MFCameraUpdateFactory;
-import vn.map4d.map4dsdk.maps.LatLng;
-import vn.map4d.map4dsdk.maps.Map4D;
-import vn.map4d.map4dsdk.maps.OnMapReadyCallback;
+import vn.map4d.map.annotations.MFBitmapDescriptorFactory;
+import vn.map4d.map.annotations.MFCircle;
+import vn.map4d.map.annotations.MFMarker;
+import vn.map4d.map.annotations.MFMarkerOptions;
+import vn.map4d.map.annotations.MFPolyline;
+import vn.map4d.map.core.LatLng;
+import vn.map4d.map.core.MFSupportMapFragment;
+import vn.map4d.map.core.Map4D;
+import vn.map4d.map.core.OnMapReadyCallback;
+import vn.map4d.types.MFLocationCoordinate;
 
 public class HomeActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback, LocationListener {
 
@@ -92,10 +96,6 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
 
     GoogleSignInClient googleSignInClient;
     private static final int RC_MAIN = 1;
-    private Map4D map;
-    private MFPolyline polyline;
-    private MFCircle circle;
-    private MFMarker marker;
     private LocationManager locationManager;
     private LocationListener listener;
     Context context;
@@ -112,11 +112,68 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     ImageView img_Menu;
     DrawerLayout drawer;
 
+    private Map4D map4D;
+    private MFPolyline polyline;
+    private MFCircle circle;
+    private MFMarker marker;
+    private  boolean defaultInfoWindow = true;
+    class CustomInfoWindowAdapter implements Map4D.InfoWindowAdapter {
+
+        // These are both viewgroups containing an ImageView with id "badge" and two TextViews with id
+        // "title" and "snippet".
+        private final View mWindow;
+
+        CustomInfoWindowAdapter() {
+            mWindow = getLayoutInflater().inflate(R.layout.custom_info_window, null);
+        }
+
+        @Override
+        public View getInfoWindow(MFMarker marker) {
+            if (defaultInfoWindow) {
+                return null;
+            }
+            render(marker, mWindow);
+            return mWindow;
+        }
+
+        @Override
+        public View getInfoContents(MFMarker marker) {
+            return null;
+        }
+
+        private void render(MFMarker marker, View view) {
+            String title = marker.getTitle();
+            TextView titleUi = ((TextView) view.findViewById(R.id.title));
+            if (title != null) {
+                // Spannable string allows us to edit the formatting of the text.
+                SpannableString titleText = new SpannableString(title);
+                titleText.setSpan(new ForegroundColorSpan(Color.RED), 0, titleText.length(), 0);
+                titleUi.setText(titleText);
+            } else {
+                titleUi.setText(title);
+            }
+
+            String snippet = marker.getSnippet();
+            TextView snippetUi = ((TextView) view.findViewById(R.id.snippet));
+            if (snippet != null && snippet.length() > 12) {
+                SpannableString snippetText = new SpannableString(snippet);
+                snippetText.setSpan(new ForegroundColorSpan(Color.MAGENTA), 0, 10, 0);
+                snippetText.setSpan(new ForegroundColorSpan(Color.BLUE), 12, snippet.length(), 0);
+                snippetUi.setText(snippetText);
+            } else {
+                snippetUi.setText(snippet);
+            }
+        }
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+        MFSupportMapFragment mapFragment = (MFSupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map2D);
+        mapFragment.getMapAsync(this);
+
         initLayout();
 
         sharedpreferences = getSharedPreferences(AccessToken_Key, Context.MODE_PRIVATE);
@@ -179,6 +236,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                             tvCompoundCode.setText(model_smartcode_data.getResults().getCompoundCode());
                             tvLatlng.setText(latitude+","+longitude);
                             layoutSmartcode.setVisibility(View.VISIBLE);
+                            addMakerToMap(latitude, longitude);
                             //Toast.makeText(getApplicationContext(), model_smartcode_data.getResults().getSmartCode(), Toast.LENGTH_SHORT).show();
                         }
 
@@ -348,7 +406,6 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         return status;
     }
 
-
     //get facebook profile
     private void getFaceBookProfile(){
         GraphRequest request = GraphRequest.newMeRequest(AccessToken.getCurrentAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
@@ -442,9 +499,11 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
 
         if (id == R.id.nav_home) {
 
-        } else if (id == R.id.nav_show_Map) {
-//            Intent viewMap3D =new Intent(OnMapActivity.this, Mode3dActivity.class);
-//            startActivity(viewMap3D);
+        } else if (id == R.id.nav_introduce) {
+            Intent intent =new Intent(HomeActivity.this, IntroduceActivity.class);
+            startActivityForResult(intent, RC_MAIN);
+            finish();
+            overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
         } else if (id == R.id.nav_account) {
             if (tvNav_Email!=null){
                 Intent intent =new Intent(HomeActivity.this, InfoActivity.class);
@@ -480,27 +539,32 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     }
 
     @Override
-    public void onMapReady(Map4D map4D) {
-        map = map4D;
+    public void onMapReady(final Map4D map4D) {
+        this.map4D = map4D;
         configure_button();
         //map4D.animateCamera(MFCameraUpdateFactory.newLatLngZoom(latLng,16.0f));
         map4D.setOnMapClickListener(new Map4D.OnMapClickListener() {
-            @Override
-            public void onMapClick(LatLng latLng) {
-                Double lat = latLng.getLatitude();
-                Double lng = latLng.getLongitude();
-                //addMakerToMap(lat, lng);
-                getDataSmartcode(lat, lng);
-            }
-        });
+                @Override
+                public void onMapClick(MFLocationCoordinate mfLocationCoordinate) {
+                    Double lat = mfLocationCoordinate.getLatitude();
+                    Double lng = mfLocationCoordinate.getLongitude();
+                    Log.e("latitude:", lat+"");
+                    Log.e("longitude:", lng+"");
+
+                    //addMakerToMap(lat, lng);
+                    getDataSmartcode(lat, lng);
+                }
+            });
 
         //auto load my location
         map4D.setOnMyLocationClickListener(new Map4D.OnMyLocationClickListener() {
             @Override
             public void onMyLocationClick(final Location location) {
-                Toast.makeText(getApplicationContext(), location.getLatitude()+"_"+location.getLongitude(), Toast.LENGTH_SHORT).show();
+                addMakerToMap(location.getLatitude(), location.getLongitude());
+                Toast.makeText(getApplicationContext(), location.getLatitude() + "_" + location.getLongitude(), Toast.LENGTH_SHORT).show();
             }
         });
+        //addMakerToMap(16.080732, 108.230364);
     }
     void configure_button() {
         // first check for permissions
@@ -511,7 +575,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             }
             return;
         }
-        map.setMyLocationEnabled(true);
+        map4D.setMyLocationEnabled(true);
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         listener = new LocationListener() {
             @Override
@@ -565,13 +629,38 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     }
 
     private void addMakerToMap(Double lat, Double lng){
+        View view = createMarkerView();
         if (marker!=null){
             marker.remove();
         }
         if (lat!=null && lng!=null) {
-            marker = map.addMarker(new MFMarkerOptions()
-                    .position(new LatLng(lat, lng))
-                    .icon(MFBitmapDescriptorFactory.fromResource(R.drawable.location)));
+            marker = map4D.addMarker(new MFMarkerOptions()
+                    .position(new MFLocationCoordinate(lat, lng))
+                    .title("Marker  test")
+                    .snippet(lat+", "+lng)
+                    .iconView(view)
+            );
         }
+    }
+    View createMarkerView() {
+        // Create new LinearLayout
+        LinearLayout linearLayout = new LinearLayout(this);
+        linearLayout.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT));
+        linearLayout.setOrientation(LinearLayout.VERTICAL);
+        linearLayout.setBackgroundColor(0x0FFFFFF);
+
+//        TextView textView1 = new TextView(this);
+//        textView1.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+//                LinearLayout.LayoutParams.WRAP_CONTENT));
+//        textView1.setText("TextView");
+//        textView1.setBackgroundColor(0xff66ff66); // hex color 0xAARRGGBB
+//        textView1.setPadding(20, 0, 20, 20); // in pixels (left, top, right, bottom)
+//        linearLayout.addView(textView1);
+
+        ImageView imageView = new ImageView(this);
+        imageView.setImageResource(R.drawable.ic_default_marker);
+        linearLayout.addView(imageView);
+        return linearLayout;
     }
 }

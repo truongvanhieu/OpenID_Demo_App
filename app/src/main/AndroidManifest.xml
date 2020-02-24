@@ -3,12 +3,23 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.map4d.openid_demo_app">
 
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-feature
+        android:glEsVersion="0x00020000"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.camera.autofocus"
+        android:required="false" />
+
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-feature android:name="android.hardware.location.gps"/>
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.hardware.camera.autofocus" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -18,6 +29,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
+        <activity android:name=".IntroduceActivity"></activity>
         <activity
             android:name=".HomeActivity"
             android:theme="@style/AppTheme.NoActionBar">
@@ -36,7 +48,7 @@
             android:theme="@style/AppTheme.Dark" />
 
         <meta-data
-            android:name="vn.map4d.map4dsdk.ACCESS_KEY"
+            android:name="vn.map4d.map.ACCESS_KEY"
             android:value="98fd21346d83bee24dc734231f7609c9" />
         <meta-data
             android:name="com.facebook.sdk.ApplicationId"
